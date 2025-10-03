@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["vite/client"],
+    "baseUrl": "./src",
+    "paths": {
+      "@ui/*": ["ui/*"],
+      "@scenes/*": ["scenes/*"],
+      "@shared/*": ["shared/*"]
+    }
+  },
+  "include": ["src"],
+  "exclude": ["dist"]
+}

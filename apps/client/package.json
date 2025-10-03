@@ -1,0 +1,22 @@
+{
+  "name": "@game/client",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@game/engine": "workspace:*",
+    "@game/protocol": "workspace:*",
+    "colyseus.js": "^0.15.21",
+    "phaser": "^3.80.1",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5",
+    "vite": "^5.2.0"
+  }
+}

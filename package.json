@@ -1,0 +1,18 @@
+{
+  "name": "uno-for-fun",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@8.15.6",
+  "scripts": {
+    "dev": "concurrently \"pnpm -F apps/server dev\" \"pnpm -F apps/client dev\"",
+    "build": "pnpm -r --filter ./... run build",
+    "test": "pnpm -F packages/engine test",
+    "lint": "echo \"Add lint configuration\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "typescript": "^5.4.5",
+    "eslint": "^8.57.0",
+    "prettier": "^3.2.5"
+  }
+}

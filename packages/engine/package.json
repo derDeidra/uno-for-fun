@@ -1,0 +1,21 @@
+{
+  "name": "@game/engine",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsup src/index.ts --dts --format esm,cjs",
+    "dev": "tsup src/index.ts --dts --format esm,cjs --watch",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "tsup": "^7.2.0",
+    "vitest": "^1.4.0"
+  }
+}
