@@ -1,1 +1,126 @@
-node_modules
+# ==========================
+# Node / package managers
+# ==========================
+
+# Ignore all node_modules folders (monorepo + packages)
+node_modules/
+**/node_modules/
+
+# pnpm store / cache
+.pnpm-store/
+.pnpm-debug.log*
+
+# Ignore lockfiles for other package managers (we keep pnpm-lock.yaml in repo)
+package-lock.json
+yarn.lock
+
+# ==========================
+# TypeScript / build artifacts
+# ==========================
+
+# TypeScript incremental build files
+*.tsbuildinfo
+
+# Build output folders
+dist/
+build/
+out/
+**/dist/
+**/build/
+**/out/
+
+# Vite / devtool caches
+.vite/
+.vitepress/dist/
+.vitepress/cache/
+.vite_cache/
+
+# Vitest
+.vitest/
+
+# Generated typings (if any)
+*.d.ts
+
+# Coverage
+coverage/
+**/coverage/
+nyc_output/
+
+# Test result artifacts
+test-results/
+
+# ==========================
+# Secrets, environment files
+# ==========================
+
+# Local env files (keep examples in repo)
+.env
+.env.local
+.env.*.local
+
+# Keep env examples
+!.env.example
+
+# ==========================
+# Logs
+# ==========================
+
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+lerna-debug.log*
+
+# ==========================
+# Editors & OS files
+# ==========================
+
+# VSCode
+.vscode/
+
+# JetBrains
+.idea/
+*.iml
+
+# Mac / Windows
+.DS_Store
+Thumbs.db
+
+# Swap / backup files
+*.swp
+*~
+
+# Misc
+.cache/
+.tmp/
+tmp/
+
+# ==========================
+# Monorepo / workspace specifics
+# ==========================
+
+# pnpm workspace virtual store (if present)
+.pnpm/
+
+# pnpm workspace .modules (older layouts)
+.modules/
+
+# Node global debug
+.npm/
+
+# Optional: ignore local build/test state for apps/packages
+apps/**/dist/
+packages/**/dist/
+packages/**/build/
+
+# Keep CI config and lockfiles committed; ignore local CI artifacts
+.github/actions/cache/
+
+# ==========================
+# Local IDE run artifacts / OS-specific
+# ==========================
+
+# PowerShell history (Windows)
+ConsoleHost_history.txt
+
