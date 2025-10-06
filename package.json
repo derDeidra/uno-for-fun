@@ -4,9 +4,10 @@
   "private": true,
   "packageManager": "pnpm@8.15.6",
   "scripts": {
-    "dev": "concurrently \"pnpm -F apps/server dev\" \"pnpm -F apps/client dev\"",
+    "predev": "pnpm --filter @game/engine build && pnpm --filter @game/protocol build",
+    "dev": "concurrently \"pnpm --filter @game/protocol dev\" \"pnpm --filter @game/engine dev\" \"pnpm --filter @game/server dev\" \"pnpm --filter @game/client dev\"",
     "build": "pnpm -r --filter ./... run build",
-    "test": "pnpm -F packages/engine test",
+    "test": "pnpm --filter @game/engine test",
     "lint": "echo \"Add lint configuration\""
   },
   "devDependencies": {

@@ -8,6 +8,7 @@ export default class LobbyScene extends Phaser.Scene {
   private panel!: UIPanel;
   private joinedHandler = (message: Extract<ServerMessage, { type: "joined" }>) => this.onJoined(message);
   private errorHandler = (message: Extract<ServerMessage, { type: "error" }>) => this.showToast(message.message);
+  private tornDown = false;
 
   constructor() {
     super({ key: "Lobby" });
@@ -17,18 +18,20 @@ export default class LobbyScene extends Phaser.Scene {
     this.network = this.registry.get("network") as NetworkClient;
     this.panel = new UIPanel("lobby-panel", "Join Table");
     this.panel.setHTML(`
-      <label>Display Name
+      <div class="form-field">
+        <label for="player-name">Display Name</label>
         <input id="player-name" type="text" maxlength="40" value="Player" />
-      </label>
-      <label>Room Code
+      </div>
+      <div class="form-field">
+        <label for="room-code">Room Code</label>
         <input id="room-code" type="text" maxlength="8" value="uno" />
-      </label>
-      <label>
+      </div>
+      <div class="checkbox-row">
         <input id="spectator" type="checkbox" />
-        Join as spectator
-      </label>
+        <span>Join as spectator</span>
+      </div>
       <button id="join-btn">Join</button>
-      <div id="status" style="margin-top:8px;font-size:12px;color:#ccc;"></div>
+      <div id="status" class="status-text"></div>
     `);
     this.panel.setVisible(true);
 
@@ -36,9 +39,16 @@ export default class LobbyScene extends Phaser.Scene {
     joinBtn?.addEventListener("click", () => this.join());
     this.network.on("joined", this.joinedHandler);
     this.network.on("error", this.errorHandler);
+
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.handleShutdown, this);
+    this.events.once(Phaser.Scenes.Events.DESTROY, this.handleShutdown, this);
   }
 
-  shutdown(): void {
+  private handleShutdown(): void {
+    if (this.tornDown) {
+      return;
+    }
+    this.tornDown = true;
     this.network.off("joined", this.joinedHandler);
     this.network.off("error", this.errorHandler);
     this.panel.destroy();
@@ -70,7 +80,10 @@ export default class LobbyScene extends Phaser.Scene {
     localStorage.setItem("uno-token", message.token);
     this.registry.set("playerId", message.playerId);
     this.updateStatus(`Joined as ${message.playerId}`);
-    this.time.delayedCall(300, () => this.scene.start("Room"));
+    this.time.delayedCall(300, () => {
+      this.handleShutdown();
+      this.scene.start("Room");
+    });
   }
 
   private showToast(text: string): void {

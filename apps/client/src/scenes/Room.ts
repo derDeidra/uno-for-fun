@@ -12,6 +12,7 @@ export default class RoomScene extends Phaser.Scene {
   private lastHand: unknown = null;
   private stateHandler = (message: Extract<ServerMessage, { type: "state" }>) => this.onState(message);
   private errorHandler = (message: Extract<ServerMessage, { type: "error" }>) => this.toast(message.message);
+  private tornDown = false;
 
   constructor() {
     super({ key: "Room" });
@@ -23,9 +24,20 @@ export default class RoomScene extends Phaser.Scene {
     this.rulesPanel = new UIPanel("room-rules", "Rules");
     this.network.on("state", this.stateHandler);
     this.network.on("error", this.errorHandler);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.handleShutdown, this);
+    this.events.once(Phaser.Scenes.Events.DESTROY, this.handleShutdown, this);
+
+    const snapshot = this.network.getLastState();
+    if (snapshot) {
+      this.onState(snapshot);
+    }
   }
 
-  shutdown(): void {
+  private handleShutdown(): void {
+    if (this.tornDown) {
+      return;
+    }
+    this.tornDown = true;
     this.network.off("state", this.stateHandler);
     this.network.off("error", this.errorHandler);
     this.playerPanel.destroy();
@@ -35,13 +47,18 @@ export default class RoomScene extends Phaser.Scene {
   private onState(message: Extract<ServerMessage, { type: "state" }>): void {
     this.currentState = message.state as SerializableState;
     this.lastHand = message.hand ?? null;
-    this.renderPlayers();
-    this.renderRules();
-    if (this.currentState.phase === "inGame" && !this.scene.isActive("Game")) {
+    if (!this.currentState) {
+      return;
+    }
+    if (this.currentState.phase === "inGame") {
       this.registry.set("lastState", this.currentState);
       this.registry.set("lastHand", this.lastHand);
+      this.handleShutdown();
       this.scene.start("Game");
+      return;
     }
+    this.renderPlayers();
+    this.renderRules();
   }
 
   private renderPlayers(): void {
@@ -49,13 +66,18 @@ export default class RoomScene extends Phaser.Scene {
       return;
     }
     const list = this.currentState.players
+      .filter((player) => !player.isSpectator)
       .map((player, idx) => {
         const turn = idx === this.currentState?.currentPlayerIndex ? "(turn)" : "";
         const status = player.connected ? "online" : "offline";
         return `<div><strong>${player.name}</strong> - ${player.cardCount} cards ${turn} <small>${status}</small></div>`;
       })
       .join("");
-    this.playerPanel.setHTML(list || "Waiting for players...");
+    const spectators = this.currentState.players.filter((p) => p.isSpectator);
+    const spectatorLine = spectators.length > 0 ? `<div class="spectators">Spectators: ${spectators
+      .map((s) => s.name)
+      .join(", ")}</div>` : "";
+    this.playerPanel.setHTML((list || "Waiting for players...") + spectatorLine);
   }
 
   private renderRules(): void {

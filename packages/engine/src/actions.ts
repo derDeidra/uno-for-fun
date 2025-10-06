@@ -17,12 +17,11 @@ import {
 } from "./effects";
 import {
   currentPlayer,
-  advanceTurn,
   setCurrentColor,
   setTurnPhase,
   activePlayerIndices,
 } from "./state";
-import { getNextPlayer } from "./turn";
+import { advanceTurn, getNextPlayer } from "./turn";
 
 function ensureInGame(state: GameState): void {
   if (state.phase !== "inGame") {
@@ -362,3 +361,4 @@ export function attemptJumpIn(
     completeTurn(state);
   }
 }
+

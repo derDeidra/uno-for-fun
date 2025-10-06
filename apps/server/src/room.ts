@@ -148,8 +148,9 @@ export class UnoRoom extends Room {
       playerId: session.playerId,
       token: session.token,
     } satisfies ServerMessage);
+    this.match.ensureTurnReady();
     this.sendStateTo(binding);
-    this.broadcastState();
+    this.broadcastState({ ensure: false });
   }
 
   private guardPlayer(client: Client, fn: (binding: ClientBinding) => void): void {
@@ -171,7 +172,10 @@ export class UnoRoom extends Room {
     binding.client.send("server", message);
   }
 
-  private broadcastState(): void {
+  private broadcastState(options: { ensure?: boolean } = {}): void {
+    if (options.ensure !== false) {
+      this.match.ensureTurnReady();
+    }
     for (const binding of this.bindings.values()) {
       this.sendStateTo(binding);
     }

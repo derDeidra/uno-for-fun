@@ -17,6 +17,8 @@ import {
   serializeState,
   serializeHand,
   getPlayerHand,
+  currentPlayer,
+  playerHasPlayableCard,
 } from "@game/engine";
 import { clientMessageSchema } from "@game/protocol";
 import type { ClientMessage } from "@game/protocol";
@@ -84,10 +86,12 @@ export class MatchController {
       this.tokens.delete(tokenEntry[0]);
     }
     removePlayer(this.state, playerId);
+    this.ensureTurnReady();
   }
 
   start(): void {
     startGame(this.state);
+    this.ensureTurnReady();
   }
 
   applyMessage(playerId: string, message: ClientMessage): void {
@@ -121,6 +125,45 @@ export class MatchController {
         break;
       default:
         break;
+    }
+    this.ensureTurnReady();
+  }
+
+  ensureTurnReady(): void {
+    if (this.state.phase !== "inGame") {
+      return;
+    }
+    let iterations = 0;
+    while (iterations++ < 24) {
+      if (this.state.phase !== "inGame") {
+        break;
+      }
+      if (this.state.jumpInWindow) {
+        break;
+      }
+      const active = currentPlayer(this.state);
+      if (!active || active.isSpectator) {
+        break;
+      }
+      if (this.state.drawStack) {
+        drawCard(this.state, active.id);
+        continue;
+      }
+      if (!playerHasPlayableCard(this.state, active.id)) {
+        drawCard(this.state, active.id);
+        if (this.state.phase !== "inGame") {
+          break;
+        }
+        if (this.state.jumpInWindow) {
+          break;
+        }
+        if (this.state.ruleSet.drawToPlay === "oneThenPass" && !playerHasPlayableCard(this.state, active.id)) {
+          passTurn(this.state, active.id);
+          continue;
+        }
+        continue;
+      }
+      break;
     }
   }
 

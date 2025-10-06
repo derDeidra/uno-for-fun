@@ -10,10 +10,10 @@
     "start": "node dist/index.js"
   },
   "dependencies": {
-    "@colyseus/ws-transport": "^0.15.14",
+    "@colyseus/ws-transport": "^0.16.5",
     "@game/engine": "workspace:*",
     "@game/protocol": "workspace:*",
-    "colyseus": "^0.15.20",
+    "colyseus": "^0.16.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "lodash.clonedeep": "^4.5.0",

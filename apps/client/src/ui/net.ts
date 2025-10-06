@@ -19,6 +19,7 @@ export class NetworkClient {
   private client: Client;
   private room?: Room;
   private handlers: Map<NetworkEvent, Set<NetworkHandler<NetworkEvent>>> = new Map();
+  private lastState: Extract<ServerMessage, { type: "state" }> | null = null;
 
   constructor(endpoint = defaultEndpoint()) {
     this.client = new Client(endpoint);
@@ -55,6 +56,10 @@ export class NetworkClient {
     this.handlers.get(event)?.delete(handler as NetworkHandler<NetworkEvent>);
   }
 
+  getLastState(): Extract<ServerMessage, { type: "state" }> | null {
+    return this.lastState;
+  }
+
   private handleMessage(raw: unknown): void {
     let message: ServerMessage;
     try {
@@ -62,6 +67,9 @@ export class NetworkClient {
     } catch (err) {
       console.error("Failed to parse server message", raw, err);
       return;
+    }
+    if (message.type === "state") {
+      this.lastState = message;
     }
     const listeners = this.handlers.get(message.type);
     listeners?.forEach((handler) => handler(message as any));
