@@ -46,6 +46,23 @@ function updateUnoFlag(player: MatchPlayer, auto: boolean): void {
   }
 }
 
+function getPreviousActivePlayer(state: GameState): MatchPlayer | null {
+  const indices = activePlayerIndices(state);
+  if (indices.length <= 1) {
+    return null;
+  }
+  const currentIndex = state.currentPlayerIndex;
+  const currentPosition = indices.indexOf(currentIndex);
+  if (currentPosition === -1) {
+    return null;
+  }
+  const delta = state.direction === 1 ? -1 : 1;
+  const len = indices.length;
+  const previousPosition = ((currentPosition + delta) % len + len) % len;
+  const previousIndex = indices[previousPosition];
+  return state.players[previousIndex] ?? null;
+}
+
 function applyChosenColor(
   state: GameState,
   card: CardInstance,
@@ -312,13 +329,17 @@ export function callUno(state: GameState, playerId: string): void {
   player.hand.unoDeclared = true;
 }
 
-export function catchUno(state: GameState, callerId: string, targetId: string): void {
-  if (callerId === targetId) {
+export function catchUno(state: GameState, callerId: string, targetId?: string): void {
+  ensureInGame(state);
+  const target = targetId ? findPlayer(state, targetId) : getPreviousActivePlayer(state);
+  if (!target) {
+    return;
+  }
+  if (callerId === target.id) {
     throw new Error("Cannot catch yourself");
   }
-  const target = findPlayer(state, targetId);
   if (target.hand.cards.length === 1 && !target.hand.unoDeclared) {
-    drawToPlayer(state, targetId, state.ruleSet.unoCall.penaltyDraw);
+    drawToPlayer(state, target.id, state.ruleSet.unoCall.penaltyDraw);
     target.hand.unoDeclared = false;
   }
 }

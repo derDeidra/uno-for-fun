@@ -9,7 +9,7 @@ export type ClientMessage =
   | { type: "drawCard" }
   | { type: "pass" }
   | { type: "callUno" }
-  | { type: "catchUno"; targetPlayerId: string }
+  | { type: "catchUno"; targetPlayerId?: string }
   | { type: "jumpIn"; cardId: string; chosenColor?: Color }
   | { type: "finalizeJump" }
   | { type: "setRules"; rules: RuleSet }

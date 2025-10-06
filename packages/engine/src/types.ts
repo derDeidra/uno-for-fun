@@ -176,6 +176,10 @@ export interface SerializableState {
     cardCount: number;
     unoDeclared: boolean;
     isSpectator?: boolean;
+    handPreview?: Array<{
+      id: string;
+      face: CardFace;
+    }>;
   }>;
   topDiscard?: CardFace;
   drawPileCount: number;

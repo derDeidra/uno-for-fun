@@ -18,7 +18,7 @@ export default class GameScene extends Phaser.Scene {
   private deckBack?: Phaser.GameObjects.Image;
   private turnText!: Phaser.GameObjects.Text;
   private spectatorText!: Phaser.GameObjects.Text;
-  private playerNodes: Phaser.GameObjects.Container[] = [];
+  private playerNodes: Phaser.GameObjects.GameObject[] = [];
   private handContainer!: HTMLDivElement;
   private actionPanel!: HTMLDivElement;
   private playerId!: string;
@@ -84,7 +84,13 @@ export default class GameScene extends Phaser.Scene {
     this.scale.off("resize", this.handleResize, this);
     this.handContainer.remove();
     this.actionPanel.remove();
-    this.playerNodes.forEach((node) => node.destroy());
+    this.playerNodes.forEach((node) => {
+      if (node instanceof Phaser.GameObjects.Container) {
+        node.destroy(true);
+      } else {
+        node.destroy();
+      }
+    });
     this.playerNodes = [];
   }
 
@@ -179,21 +185,32 @@ export default class GameScene extends Phaser.Scene {
     this.playerNodes.forEach((node) => node.destroy());
     this.playerNodes = [];
 
-    const players = this.state.players.filter((p) => !p.isSpectator);
-    if (players.length === 0) {
+    const seated = this.state.players.filter((p) => !p.isSpectator);
+    if (seated.length === 0) {
       return;
     }
     const centerX = this.scale.width / 2;
     const centerY = this.scale.height / 2;
-    const radius = Math.max(Math.min(this.scale.width, this.scale.height) * 0.35, 160);
-    const angleStep = (Math.PI * 2) / players.length;
+    const radius = Math.max(Math.min(this.scale.width, this.scale.height) * 0.35, 180);
+    const previewRadius = Math.max(radius - 110, radius * 0.6);
+    const angleStep = (Math.PI * 2) / seated.length;
     const currentId = this.state.players[this.state.currentPlayerIndex]?.id;
+    const localIndex = seated.findIndex((player) => player.id === this.playerId);
+    const orderedPlayers =
+      localIndex >= 0
+        ? [...seated.slice(localIndex), ...seated.slice(0, localIndex)]
+        : seated;
+    const baseAngle = localIndex >= 0 ? Math.PI / 2 : -Math.PI / 2;
+    const revealOpposite = this.state.ruleSet.variant === "unoFlip";
+    const activeFace = this.state.activeFace ?? "light";
+    const previewBackFace =
+      this.variant === "unoFlip" ? (activeFace === "light" ? "dark" : "light") : activeFace;
 
-    players.forEach((player, index) => {
-      const angle = -Math.PI / 2 + angleStep * index;
-      const x = centerX + Math.cos(angle) * radius;
-      const y = centerY + Math.sin(angle) * radius;
-      const container = this.add.container(x, y);
+    orderedPlayers.forEach((player, displayIndex) => {
+      const angle = baseAngle - angleStep * displayIndex;
+      const seatX = centerX + Math.cos(angle) * radius;
+      const seatY = centerY + Math.sin(angle) * radius;
+      const container = this.add.container(seatX, seatY);
       container.setDepth(4);
 
       const isCurrent = player.id === currentId;
@@ -201,12 +218,12 @@ export default class GameScene extends Phaser.Scene {
       const fill = isCurrent ? 0xf2d94c : 0x2c2a44;
       const border = isCurrent ? 0xf9f0a6 : 0x514f7a;
 
-      const panel = this.add.rectangle(0, 0, 180, 90, fill, isCurrent ? 0.92 : 0.78);
+      const panel = this.add.rectangle(0, 0, 200, 96, fill, isCurrent ? 0.92 : 0.78);
       panel.setStrokeStyle(2, border, 1);
       panel.setOrigin(0.5);
 
       const nameText = this.add
-        .text(0, -18, `${player.name}${isLocal ? " (You)" : ""}`, {
+        .text(0, -24, `${player.name}${isLocal ? " (You)" : ""}`, {
           fontSize: "18px",
           color: isCurrent ? "#1d1b2f" : "#f2f2ff",
           fontStyle: isCurrent ? "bold" : "normal",
@@ -216,7 +233,7 @@ export default class GameScene extends Phaser.Scene {
 
       const cardLabel = player.cardCount === 1 ? "card" : "cards";
       const cardsText = this.add
-        .text(0, 8, `${player.cardCount} ${cardLabel}`, {
+        .text(0, 2, `${player.cardCount} ${cardLabel}`, {
           fontSize: "16px",
           color: isCurrent ? "#1d1b2f" : "#d4d0ff",
         })
@@ -225,7 +242,7 @@ export default class GameScene extends Phaser.Scene {
       let unoText: Phaser.GameObjects.Text | undefined;
       if (player.cardCount === 1 && !player.unoDeclared) {
         unoText = this.add
-          .text(0, 34, "UNO!", {
+          .text(0, 36, "UNO!", {
             fontSize: "16px",
             color: "#ff5370",
             fontStyle: "bold",
@@ -233,7 +250,7 @@ export default class GameScene extends Phaser.Scene {
           .setOrigin(0.5, 0.5);
       } else if (player.unoDeclared) {
         unoText = this.add
-          .text(0, 34, "UNO declared", {
+          .text(0, 36, "UNO declared", {
             fontSize: "14px",
             color: "#7cf29d",
           })
@@ -245,7 +262,89 @@ export default class GameScene extends Phaser.Scene {
         container.add(unoText);
       }
       this.playerNodes.push(container);
+
+      if (!isLocal && player.cardCount > 0) {
+        const previews = revealOpposite ? player.handPreview ?? [] : [];
+        const previewContainer = this.renderPreviewHand(
+          angle,
+          centerX,
+          centerY,
+          previewRadius,
+          previews,
+          player.cardCount,
+          previewBackFace
+        );
+        if (previewContainer) {
+          this.playerNodes.push(previewContainer);
+        }
+      }
     });
+  }
+
+  private renderPreviewHand(
+    angle: number,
+    centerX: number,
+    centerY: number,
+    radius: number,
+    previews: Array<{ id: string; face: CardFace }> | undefined,
+    fallbackCount: number,
+    activeFace: Face
+  ): Phaser.GameObjects.Container | null {
+    const previewCount = previews?.length ?? 0;
+    const totalCards = previewCount > 0 ? previewCount : fallbackCount;
+    if (totalCards <= 0) {
+      return null;
+    }
+    const handX = centerX + Math.cos(angle) * radius;
+    const handY = centerY + Math.sin(angle) * radius;
+    const container = this.add.container(handX, handY);
+    container.setDepth(3);
+
+    const maxSpread = 180;
+    const spacing = totalCards > 1 ? Math.min(34, maxSpread / (totalCards - 1)) : 0;
+    const startX = -((totalCards - 1) * spacing) / 2;
+
+    for (let i = 0; i < totalCards; i += 1) {
+      const face = previews?.[i]?.face ?? null;
+      const cardImage = this.createPreviewCardImage(face, activeFace);
+      cardImage.setPosition(startX + spacing * i, 0);
+      container.add(cardImage);
+    }
+
+    return container;
+  }
+
+  private createPreviewCardImage(face: CardFace | null, activeFace: Face): Phaser.GameObjects.Image {
+    const targetHeight = 96;
+    const targetWidth = 64;
+
+    if (face) {
+      const frame = cardFrameFor(face, this.variant);
+      if (frame) {
+        const image = this.add.image(0, 0, frame.textureKey, frame.frame);
+        image.setDisplaySize(targetWidth, targetHeight);
+        image.setOrigin(0.5, 0.5);
+        return image;
+      }
+      const fallback = this.fallbackTextureKey(face);
+      const image = this.add.image(0, 0, fallback);
+      image.setDisplaySize(targetWidth, targetHeight);
+      image.setOrigin(0.5, 0.5);
+      return image;
+    }
+
+    const backFrame = deckBackFrame(activeFace, this.variant);
+    if (backFrame) {
+      const image = this.add.image(0, 0, backFrame.textureKey, backFrame.frame);
+      image.setDisplaySize(targetWidth, targetHeight);
+      image.setOrigin(0.5, 0.5);
+      return image;
+    }
+
+    const fallback = this.add.image(0, 0, activeFace === "dark" ? "card-dark" : "card-ruby");
+    fallback.setDisplaySize(targetWidth, targetHeight);
+    fallback.setOrigin(0.5, 0.5);
+    return fallback;
   }
 
   private renderSpectators(): void {
@@ -310,25 +409,48 @@ export default class GameScene extends Phaser.Scene {
   }
 
   private renderActions(): void {
-    this.actionPanel.innerHTML = `
-      <button id="uno-btn">UNO</button>
-      <button id="catch-btn">Catch UNO</button>
-    `;
-    this.actionPanel
-      .querySelector<HTMLButtonElement>("#uno-btn")
-      ?.addEventListener("click", () => {
-        this.network.send({ type: "callUno" }).catch((err) => this.toast(err.message ?? "UNO failed"));
+    if (!this.state) {
+      return;
+    }
+    this.actionPanel.innerHTML = "";
+
+    const unoButton = document.createElement("button");
+    unoButton.id = "uno-btn";
+    unoButton.textContent = "UNO";
+
+    const hasOneCard = this.hand.length === 1;
+    if (!hasOneCard) {
+      unoButton.disabled = true;
+      unoButton.title = "UNO available when you have exactly one card";
+    }
+    if (!this.state.ruleSet.unoCall.required) {
+      unoButton.disabled = true;
+      unoButton.title = "UNO not required with current rules";
+    } else if (this.state.ruleSet.unoCall.auto) {
+      unoButton.disabled = true;
+      unoButton.title = "UNO auto-call enabled";
+    }
+
+    unoButton.addEventListener("click", () => {
+      if (unoButton.disabled) {
+        return;
+      }
+      this.network.send({ type: "callUno" }).catch((err) => this.toast(err.message ?? "UNO failed"));
+    });
+
+    this.actionPanel.appendChild(unoButton);
+
+    const catchTarget = this.findCatchTarget();
+    if (catchTarget) {
+      const catchButton = document.createElement("button");
+      catchButton.id = "catch-btn";
+      catchButton.textContent = `Catch ${catchTarget.name}`;
+      catchButton.title = `${catchTarget.name} forgot to call UNO`;
+      catchButton.addEventListener("click", () => {
+        this.network.send({ type: "catchUno" }).catch((err) => this.toast(err.message ?? "Catch failed"));
       });
-    this.actionPanel
-      .querySelector<HTMLButtonElement>("#catch-btn")
-      ?.addEventListener("click", () => {
-        const target = prompt("Player ID to catch?");
-        if (target) {
-          this.network
-            .send({ type: "catchUno", targetPlayerId: target })
-            .catch((err) => this.toast(err.message ?? "Catch failed"));
-        }
-      });
+      this.actionPanel.appendChild(catchButton);
+    }
   }
 
   private async playCard(card: HandCardView): Promise<void> {
@@ -361,6 +483,37 @@ export default class GameScene extends Phaser.Scene {
     } catch (err: any) {
       this.toast(err.message ?? "Play failed");
     }
+  }
+
+  private findCatchTarget(): SerializableState["players"][number] | null {
+    if (!this.state) {
+      return null;
+    }
+    if (!this.state.ruleSet.unoCall.required) {
+      return null;
+    }
+    const activeIndices = this.state.players
+      .map((player, index) => (player.isSpectator ? -1 : index))
+      .filter((index) => index !== -1);
+    if (activeIndices.length <= 1) {
+      return null;
+    }
+    const currentIndex = this.state.currentPlayerIndex;
+    const currentPosition = activeIndices.indexOf(currentIndex);
+    if (currentPosition === -1) {
+      return null;
+    }
+    const len = activeIndices.length;
+    const delta = this.state.direction === 1 ? -1 : 1;
+    const previousIndex = activeIndices[((currentPosition + delta) % len + len) % len];
+    const candidate = this.state.players[previousIndex];
+    if (!candidate || candidate.id === this.playerId) {
+      return null;
+    }
+    if (candidate.cardCount !== 1 || candidate.unoDeclared) {
+      return null;
+    }
+    return candidate;
   }
 
   private fallbackTextureKey(face: CardFace): string {

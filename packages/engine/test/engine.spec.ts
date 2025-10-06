@@ -2,12 +2,15 @@ import { describe, expect, test } from "vitest";
 import {
   RuleSet,
   createGameState,
+  addPlayer,
+  startGame,
   playCard,
   drawCard,
   passTurn,
   catchUno,
   attemptJumpIn,
   finalizeJumpIn,
+  serializeState,
   GameState,
   CardInstance,
   ActionType,
@@ -94,37 +97,42 @@ function makeWildCard(action?: ActionType, drawCount?: number): CardInstance {
   };
 }
 
+function createStubDeck(count = 24): CardInstance[] {
+  const colors: Array<"Ruby" | "Azure" | "Emerald" | "Sunshine"> = [
+    "Ruby",
+    "Azure",
+    "Emerald",
+    "Sunshine",
+  ];
+  const deck: CardInstance[] = [];
+  for (let i = 0; i < count; i += 1) {
+    const color = colors[i % colors.length];
+    const value = ((i % 9) + 1) as Value;
+    deck.push(makeNumberCard(color, value));
+  }
+  return deck;
+}
+
 function createTestState(overrides: Partial<RuleSet> = {}): GameState {
   const state = createGameState({ ...baseRules, ...overrides }, "test-seed");
+  addPlayer(state, "p1", "P1");
+  addPlayer(state, "p2", "P2");
+  addPlayer(state, "p3", "P3");
+  startGame(state);
+  state.players.forEach((player) => {
+    player.hand.cards = [];
+    player.hand.unoDeclared = false;
+  });
+  state.drawPile = createStubDeck();
+  state.discardPile = [];
+  state.pendingEffects = [];
   state.phase = "inGame";
   state.turnPhase = "awaitingAction";
-  state.players = [
-    {
-      id: "p1",
-      name: "P1",
-      connected: true,
-      isSpectator: false,
-      hand: { playerId: "p1", cards: [], unoDeclared: false },
-    },
-    {
-      id: "p2",
-      name: "P2",
-      connected: true,
-      isSpectator: false,
-      hand: { playerId: "p2", cards: [], unoDeclared: false },
-    },
-    {
-      id: "p3",
-      name: "P3",
-      connected: true,
-      isSpectator: false,
-      hand: { playerId: "p3", cards: [], unoDeclared: false },
-    },
-  ];
   state.currentPlayerIndex = 0;
-  state.drawPile = [];
-  state.discardPile = [];
   state.currentColor = "Ruby";
+  state.jumpInWindow = undefined;
+  state.drawStack = undefined;
+  state.winnerIds = [];
   return state;
 }
 
@@ -239,6 +247,21 @@ describe("engine rules", () => {
     expect(state.players[1].hand.cards.length).toBe(before + state.ruleSet.unoCall.penaltyDraw);
   });
 
+  test("catch UNO auto targets previous player when no target specified", () => {
+    const state = createTestState();
+    state.currentPlayerIndex = 1; // p2 turn
+    state.direction = 1;
+    const penaltyCardA = makeNumberCard("Ruby", 3);
+    const penaltyCardB = makeNumberCard("Azure", 4);
+    state.drawPile.push(penaltyCardA, penaltyCardB);
+    const target = state.players[0];
+    target.hand.cards = [makeNumberCard("Emerald", 1)];
+    target.hand.unoDeclared = false;
+    const before = target.hand.cards.length;
+    catchUno(state, "p3");
+    expect(target.hand.cards.length).toBe(before + state.ruleSet.unoCall.penaltyDraw);
+  });
+
   test("UNO Flip flip maintains deck integrity", () => {
     const state = createTestState({ variant: "unoFlip" });
     const flipCard: CardInstance = {
@@ -274,5 +297,41 @@ describe("engine rules", () => {
     expect(state.activeFace).toBe("dark");
     expect(state.currentColor).toBe("Amethyst");
     expect(totalAfter).toBe(totalBefore);
+  });
+
+  test("serializeState exposes opposite-face previews in UNO Flip", () => {
+    const state = createTestState({ variant: "unoFlip" });
+    state.activeFace = "light";
+    state.players[0].hand.cards = [
+      {
+        id: "flip-card",
+        light: {
+          id: "flip-light",
+          face: "light",
+          kind: "number",
+          color: "Ruby",
+          value: 5,
+        },
+        dark: {
+          id: "flip-dark",
+          face: "dark",
+          kind: "number",
+          color: "Obsidian",
+          value: 5,
+        },
+      },
+    ];
+    const serial = serializeState(state);
+    expect(serial.players[0].handPreview).toBeDefined();
+    expect(serial.players[0].handPreview?.[0].face.face).toBe("dark");
+    expect(serial.players[0].handPreview?.[0].face.color).toBe("Obsidian");
+  });
+
+  test("serializeState omits previews for base variant", () => {
+    const state = createTestState({ variant: "base" });
+    state.activeFace = "light";
+    state.players[0].hand.cards = [makeNumberCard("Ruby", 2)];
+    const serial = serializeState(state);
+    expect(serial.players[0].handPreview).toBeUndefined();
   });
 });

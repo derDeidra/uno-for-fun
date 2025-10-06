@@ -49,7 +49,7 @@ export const clientMessageSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("callUno") }),
   z.object({
     type: z.literal("catchUno"),
-    targetPlayerId: z.string(),
+    targetPlayerId: z.string().optional(),
   }),
   z.object({
     type: z.literal("jumpIn"),
