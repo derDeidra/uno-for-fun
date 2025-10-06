@@ -317,3 +317,9 @@ select:focus {
 .rule-option span {
   flex: 1;
 }
+
+.player-tag.player-tag--self {
+  background: rgba(102, 225, 149, 0.25);
+  color: #66e195;
+}
+
