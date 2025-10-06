@@ -52,6 +52,15 @@ export class MatchController {
     return this.state.ruleSet;
   }
 
+  get hostPlayerId(): string | null {
+    const host = this.state.players.find((player) => !player.isSpectator);
+    return host?.id ?? null;
+  }
+
+  isHost(playerId: string): boolean {
+    return this.hostPlayerId === playerId;
+  }
+
   setRules(rules: RuleSet): void {
     updateRuleSet(this.state, rules);
   }
@@ -69,6 +78,10 @@ export class MatchController {
   resumeSession(token: string): SessionData | null {
     const session = this.tokens.get(token) ?? null;
     if (!session) {
+      return null;
+    }
+    const player = this.state.players.find((p) => p.id === session.playerId);
+    if (!player || player.connected) {
       return null;
     }
     setPlayerConnection(this.state, session.playerId, true);

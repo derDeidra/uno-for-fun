@@ -239,3 +239,81 @@ select:focus {
   pointer-events: none;
   z-index: 30;
 }
+.ui-panel__content {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.player-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.player-entry {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.player-entry--empty {
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.player-name {
+  flex: 0 1 auto;
+}
+
+.player-tag {
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: rgba(255, 165, 92, 0.2);
+  color: #ffa45c;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.player-spectators {
+  margin: 0;
+  font-size: 0.92rem;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.rules-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.rule-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 1rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.rule-option input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  min-height: auto;
+  padding: 0;
+  margin: 0;
+  accent-color: #ffa45c;
+  flex-shrink: 0;
+}
+
+.rule-option span {
+  flex: 1;
+}

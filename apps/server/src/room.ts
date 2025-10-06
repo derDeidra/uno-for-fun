@@ -61,7 +61,11 @@ export class UnoRoom extends Room {
         } satisfies ServerMessage);
         break;
       case "startGame":
-        this.guardPlayer(client, () => {
+        this.guardPlayer(client, (binding) => {
+          if (!this.match.isHost(binding.playerId)) {
+            this.sendError(client, "not_host", "Only the host can start the game");
+            return;
+          }
           try {
             this.match.start();
             this.broadcastState();
@@ -71,7 +75,11 @@ export class UnoRoom extends Room {
         });
         break;
       case "setRules":
-        this.guardPlayer(client, () => {
+        this.guardPlayer(client, (binding) => {
+          if (!this.match.isHost(binding.playerId)) {
+            this.sendError(client, "not_host", "Only the host can change lobby rules");
+            return;
+          }
           try {
             this.match.setRules(message.rules);
             this.broadcastState();

@@ -1,5 +1,6 @@
 export class UIPanel {
   private element: HTMLDivElement;
+  private content: HTMLDivElement;
 
   constructor(id: string, title?: string) {
     const root = document.getElementById("ui-root");
@@ -14,15 +15,18 @@ export class UIPanel {
       heading.innerText = title;
       this.element.appendChild(heading);
     }
+    this.content = document.createElement("div");
+    this.content.className = "ui-panel__content";
+    this.element.appendChild(this.content);
     root.appendChild(this.element);
   }
 
   setHTML(html: string): void {
-    this.element.innerHTML = html;
+    this.content.innerHTML = html;
   }
 
   clear(): void {
-    this.element.innerHTML = "";
+    this.content.innerHTML = "";
   }
 
   setVisible(visible: boolean): void {
@@ -30,7 +34,7 @@ export class UIPanel {
   }
 
   getEl(): HTMLDivElement {
-    return this.element;
+    return this.content;
   }
 
   destroy(): void {
